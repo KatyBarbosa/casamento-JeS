@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Filtro do Casamento — J & S</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#fff}
+    .wrap{max-width:420px;margin:12px auto;padding:10px}
+    h1{font-size:18px;margin:6px 0;text-align:center}
+    p.small{font-size:13px;color:#444;margin:6px 0;text-align:center}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:8px 0}
+    button, .btn{background:#2b6cb0;color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600;cursor:pointer}
+    input[type=file]{padding:6px}
+    #video{max-width:100%;display:none;border-radius:8px}
+    #canvas{width:100%;height:auto;border-radius:8px;background:#111;margin-top:10px}
+    .note{background:#f8fafc;border:1px solid #e6eef8;padding:8px;border-radius:8px;margin:10px 0;font-size:13px}
+    label{font-size:13px}
+    .small-muted{font-size:12px;color:#666;text-align:center;display:block;margin-top:4px}
+    .footer{font-size:12px;color:#777;margin-top:16px;text-align:center}
+    .footer span{font-weight:600;color:#2b6cb0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Filtro do Casamento — J & S</h1>
+    <p class="small">Capture sua foto com a moldura personalizada 💍</p>
+
+    <div class="controls">
+      <label class="btn" id="openCamBtn">Abrir Câmera</label>
+      <label class="btn" id="stopCamBtn" style="display:none;background:#e53e3e">Parar Câmera</label>
+      <label class="btn" id="captureBtn" style="display:none;background:#38a169">Capturar</label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment" />
+    </div>
+
+    <span class="small-muted">Ou envie uma foto da galeria 📸</span>
+
+    <video id="video" playsinline autoplay></video>
+    <canvas id="canvas" width="1080" height="1920"></canvas>
+
+    <div style="margin-top:8px;text-align:center">
+      <label class="small-muted">Trocar moldura (opcional):</label><br>
+      <input id="overlayInput" type="file" accept="image/png" />
+      <button class="btn" id="applyOverlayLocal" style="margin-left:6px;padding:8px 10px">Carregar moldura</button>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:center">
+      <button class="btn" id="downloadBtn">📥 Baixar imagem</button>
+      <button class="btn" id="resetBtn" style="background:#718096">Limpar</button>
+    </div>
+
+    <div class="footer">
+      <p>Feito com amor por <span>Katiene Barbosa 💛</span></p>
+    </div>
+  </div>
+
+<script>
+const DEFAULT_OVERLAY_URL = 'overlay.png';
+
+const video = document.getElementById('video');
+const openCamBtn = document.getElementById('openCamBtn');
+const stopCamBtn = document.getElementById('stopCamBtn');
+const captureBtn = document.getElementById('captureBtn');
+const photoInput = document.getElementById('photoInput');
+const overlayInput = document.getElementById('overlayInput');
+const applyOverlayLocal = document.getElementById('applyOverlayLocal');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let stream = null;
+let overlayImage = new Image();
+let overlayLoaded = false;
+
+function tryLoadDefaultOverlay(){
+  overlayImage = new Image();
+  overlayImage.crossOrigin = 'anonymous';
+  overlayImage.onload = () => { overlayLoaded = true; }
+  overlayImage.onerror = () => { overlayLoaded = false; }
+  overlayImage.src = DEFAULT_OVERLAY_URL;
+}
+tryLoadDefaultOverlay();
+
+function drawImageCover(img){
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.width, ih = img.height;
+  const r = Math.max(cw/iw, ch/ih);
+  const nw = iw * r, nh = ih * r;
+  const x = (cw - nw)/2, y = (ch - nh)/2;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.drawImage(img, x, y, nw, nh);
+}
+
+function drawOverlay(){
+  if(overlayLoaded){
+    try{ ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height); }
+    catch(err){ console.error('Erro ao desenhar overlay:', err); }
+  }
+}
+
+photoInput.addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){ drawImageCover(img); drawOverlay(); }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(f);
+});
+
+applyOverlayLocal.addEventListener('click', ()=>{ overlayInput.click(); });
+overlayInput.addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    overlayImage = new Image();
+    overlayImage.onload = function(){ overlayLoaded = true; alert('Moldura carregada!'); }
+    overlayImage.src = e.target.result;
+  }
+  reader.readAsDataURL(f);
+});
+
+openCamBtn.addEventListener('click', async ()=>{
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      openCamBtn.style.display = 'none';
+      stopCamBtn.style.display = 'inline-block';
+      captureBtn.style.display = 'inline-block';
+    }catch(err){
+      alert('Não foi possível acessar a câmera: ' + err.message);
+    }
+  }else{
+    alert('Câmera não suportada neste navegador.');
+  }
+});
+
+stopCamBtn.addEventListener('click', ()=>{
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+  video.style.display = 'none';
+  openCamBtn.style.display = 'inline-block';
+  stopCamBtn.style.display = 'none';
+  captureBtn.style.display = 'none';
+});
+
+captureBtn.addEventListener('click', ()=>{
+  if(!stream) return;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = vw; tempCanvas.height = vh;
+  const tctx = tempCanvas.getContext('2d');
+  tctx.drawImage(video,0,0,vw,vh);
+  const img = new Image();
+  img.onload = function(){ drawImageCover(img); drawOverlay(); }
+  img.src = tempCanvas.toDataURL('image/png');
+  stream.getTracks().forEach(t=>t.stop());
+  stream = null;
+  video.style.display = 'none';
+  openCamBtn.style.display = 'inline-block';
+  stopCamBtn.style.display = 'none';
+  captureBtn.style.display = 'none';
+});
+
+downloadBtn.addEventListener('click', ()=>{
+  try{
+    const data = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = data;
+    a.download = 'foto-casamento-JS.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(err){
+    alert('Erro ao gerar arquivo (CORS). Hospede overlay e HTML juntos.');
+  }
+});
+
+resetBtn.addEventListener('click', ()=>{
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  overlayLoaded = false;
+  overlayImage = new Image();
+  tryLoadDefaultOverlay();
+});
+</script>
+</body>
+</html>
