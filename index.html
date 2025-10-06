@@ -65,7 +65,7 @@
   </div>
 
 <script>
-const video = document.createElement("video");
+const video = document.getElementById('video');
 const openCamBtn = document.getElementById('openCamBtn');
 const stopCamBtn = document.getElementById('stopCamBtn');
 const captureBtn = document.getElementById('captureBtn');
@@ -78,50 +78,32 @@ const ctx = canvas.getContext('2d');
 
 let stream = null;
 let overlayImage = new Image();
-let overlayVideo = document.createElement("video");
-overlayVideo.style.display = "none";
-overlayVideo.loop = true;
-overlayVideo.muted = true;
-overlayVideo.playsInline = true;
-
-document.body.appendChild(overlayVideo);
-
 let overlayLoaded = false;
-let overlayType = "image"; // image ou video
 let baseImage = null;
 
-// Função para parar vídeo atual
-function stopOverlayVideo(){
-  if(overlayVideo && !overlayVideo.paused){
-    overlayVideo.pause();
-    overlayVideo.currentTime = 0;
-  }
+// Lista automática de molduras — basta colocar PNG na pasta
+const overlayFiles = ["overlay.png", "overlay2.png", "overlay3.png"]; // adicione aqui novos nomes de molduras
+function populateOverlaySelect() {
+  overlaySelect.innerHTML = "";
+  overlayFiles.forEach(file => {
+    const option = document.createElement("option");
+    option.value = file;
+    option.textContent = file.replace(/\.[^/.]+$/, ""); // remove extensão para exibir só nome
+    overlaySelect.appendChild(option);
+  });
 }
+populateOverlaySelect();
 
-// Carregar moldura
+// Função para carregar moldura
 function loadOverlay(src) {
-  stopOverlayVideo();
-  overlayLoaded = false;
-  if (src.endsWith(".mp4")) {
-    overlayType = "video";
-    overlayVideo.src = src;
-    overlayVideo.play();
-    overlayVideo.onloadeddata = () => {
-      overlayLoaded = true;
-      if (baseImage) drawImageCover(baseImage);
-      animateVideoOverlay();
-    };
-  } else {
-    overlayType = "image";
-    overlayImage = new Image();
-    overlayImage.crossOrigin = "anonymous";
-    overlayImage.onload = () => { overlayLoaded = true; if (baseImage) drawImageCover(baseImage); };
-    overlayImage.src = src;
-  }
+  overlayImage = new Image();
+  overlayImage.crossOrigin = "anonymous";
+  overlayImage.onload = () => { overlayLoaded = true; if (baseImage) drawImageCover(baseImage); };
+  overlayImage.src = src;
 }
-loadOverlay('overlay.png'); // Moldura inicial
+loadOverlay(overlayFiles[0]); // Moldura inicial
 
-function drawImageCover(img){
+function drawImageCover(img) {
   baseImage = img;
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
@@ -133,18 +115,9 @@ function drawImageCover(img){
   drawOverlay();
 }
 
-function drawOverlay(){
-  if (!overlayLoaded) return;
-  if (overlayType === "image") {
+function drawOverlay() {
+  if (overlayLoaded) {
     ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
-  }
-}
-
-function animateVideoOverlay(){
-  if (overlayType === "video" && overlayLoaded) {
-    ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
-    ctx.drawImage(overlayVideo, 0, 0, canvas.width, canvas.height);
-    requestAnimationFrame(animateVideoOverlay);
   }
 }
 
@@ -173,7 +146,7 @@ openCamBtn.addEventListener('click', async ()=>{
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       video.srcObject = stream;
       video.play();
-      document.body.appendChild(video);
+      video.style.display = 'block';
       openCamBtn.style.display = 'none';
       stopCamBtn.style.display = 'inline-block';
       captureBtn.style.display = 'inline-block';
@@ -207,7 +180,7 @@ captureBtn.addEventListener('click', ()=>{
   captureBtn.style.display = 'none';
 });
 
-// Baixar
+// Baixar imagem
 downloadBtn.addEventListener('click', ()=>{
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
@@ -220,12 +193,14 @@ downloadBtn.addEventListener('click', ()=>{
 resetBtn.addEventListener('click', ()=>{
   ctx.clearRect(0,0,canvas.width,canvas.height);
   baseImage = null;
-  loadOverlay('overlay.png');
+  loadOverlay(overlayFiles[0]);
 });
 </script>
 
+
 </body>
 </html>
+
 
 
 
