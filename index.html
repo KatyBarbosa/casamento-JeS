@@ -80,84 +80,102 @@ let stream = null;
 let overlayImage = new Image();
 let overlayLoaded = false;
 
-function loadOverlay(src){
+// --- Função para carregar moldura ---
+function loadOverlay(src) {
   overlayImage = new Image();
   overlayImage.crossOrigin = 'anonymous';
-  overlayImage.onload = () => { overlayLoaded = true; drawOverlay(); };
+  overlayLoaded = false;
+  overlayImage.onload = () => {
+    overlayLoaded = true;
+    drawOverlay();
+  };
   overlayImage.src = src;
 }
 loadOverlay('overlay.png'); // padrão inicial
 
-function drawImageCover(img){
+// --- Desenhar imagem no canvas ---
+function drawImageCover(img) {
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
-  const r = Math.max(cw/iw, ch/ih);
+  const r = Math.max(cw / iw, ch / ih);
   const nw = iw * r, nh = ih * r;
-  const x = (cw - nw)/2, y = (ch - nh)/2;
-  ctx.clearRect(0,0,cw,ch);
+  const x = (cw - nw) / 2, y = (ch - nh) / 2;
+  ctx.clearRect(0, 0, cw, ch);
   ctx.drawImage(img, x, y, nw, nh);
-  drawOverlay();
+
+  // garantir que a moldura será aplicada mesmo que ainda não esteja pronta
+  if (overlayLoaded) {
+    drawOverlay();
+  } else {
+    overlayImage.onload = drawOverlay;
+  }
 }
 
-function drawOverlay(){
-  if(overlayLoaded){
+// --- Desenhar moldura ---
+function drawOverlay() {
+  if (overlayLoaded) {
     ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
   }
 }
 
-// troca de moldura
-overlaySelect.addEventListener('change', ()=>{
+// --- Troca de moldura ---
+overlaySelect.addEventListener('change', () => {
   const selected = overlaySelect.value;
   loadOverlay(selected);
   alert('Moldura alterada para: ' + overlaySelect.options[overlaySelect.selectedIndex].text);
 });
 
-// carregar foto
-photoInput.addEventListener('change', (ev)=>{
+// --- Upload de foto ---
+photoInput.addEventListener('change', (ev) => {
   const f = ev.target.files && ev.target.files[0];
-  if(!f) return;
+  if (!f) return;
   const reader = new FileReader();
-  reader.onload = e=>{
+  reader.onload = e => {
     const img = new Image();
-    img.onload = ()=> drawImageCover(img);
+    img.onload = () => drawImageCover(img);
     img.src = e.target.result;
   };
   reader.readAsDataURL(f);
 });
 
-// câmera
-openCamBtn.addEventListener('click', async ()=>{
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    try{
+// --- Câmera ---
+openCamBtn.addEventListener('click', async () => {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       video.srcObject = stream;
       video.style.display = 'block';
       openCamBtn.style.display = 'none';
       stopCamBtn.style.display = 'inline-block';
       captureBtn.style.display = 'inline-block';
-    }catch(err){ alert('Erro ao acessar câmera: ' + err.message); }
+    } catch (err) {
+      alert('Erro ao acessar câmera: ' + err.message);
+    }
   }
 });
 
-stopCamBtn.addEventListener('click', ()=>{
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+stopCamBtn.addEventListener('click', () => {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
   video.style.display = 'none';
   openCamBtn.style.display = 'inline-block';
   stopCamBtn.style.display = 'none';
   captureBtn.style.display = 'none';
 });
 
-captureBtn.addEventListener('click', ()=>{
-  if(!stream) return;
+captureBtn.addEventListener('click', () => {
+  if (!stream) return;
   const vw = video.videoWidth, vh = video.videoHeight;
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = vw; tempCanvas.height = vh;
   const tctx = tempCanvas.getContext('2d');
-  tctx.drawImage(video,0,0,vw,vh);
+  tctx.drawImage(video, 0, 0, vw, vh);
   const img = new Image();
-  img.onload = ()=> drawImageCover(img);
+  img.onload = () => drawImageCover(img);
   img.src = tempCanvas.toDataURL('image/png');
-  stream.getTracks().forEach(t=>t.stop());
+  stream.getTracks().forEach(t => t.stop());
   stream = null;
   video.style.display = 'none';
   openCamBtn.style.display = 'inline-block';
@@ -165,8 +183,10 @@ captureBtn.addEventListener('click', ()=>{
   captureBtn.style.display = 'none';
 });
 
-// baixar imagem
-downloadBtn.addEventListener('click', ()=>{
+// --- Baixar imagem ---
+downloadBtn.addEventListener('click', () => {
+  // garantir que a moldura esteja realmente aplicada antes de baixar
+  if (overlayLoaded) drawOverlay();
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = data;
@@ -174,14 +194,16 @@ downloadBtn.addEventListener('click', ()=>{
   a.click();
 });
 
-// reset
-resetBtn.addEventListener('click', ()=>{
-  ctx.clearRect(0,0,canvas.width,canvas.height);
+// --- Reset ---
+resetBtn.addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
   loadOverlay('overlay.png');
 });
 
 console.log('App-filtro criado por Katiene Barbosa carregado com sucesso.');
 </script>
+
 </body>
 </html>
+
 
