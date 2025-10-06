@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Casamento J&S</title>
 
-  <!-- Fontes -->
+  <!-- Fonte Great Vibes para cabeçalho -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
 
@@ -22,39 +22,20 @@
     .note{background:#f8fafc;border:1px solid #e6eef8;padding:8px;border-radius:8px;margin:10px 0;font-size:13px}
     label{font-size:13px}
     .small-muted{font-size:12px;color:#666}
-    .footer{font-size:14px;color:#666;margin-top:14px;text-align:center}
+    .footer{font-size:14px;color:#666;margin-top:14px}
 
     /* Cabeçalho personalizado */
-    header {
-      text-align: center;
-      margin-bottom: 10px;
-    }
     header h1 {
       font-family: 'Great Vibes', cursive;
       color: #8db24d;
-      font-size: 2.3em;
+      font-size: 2em;
       margin: 0;
-      position: relative;
-      display: inline-block;
-      animation: fadeIn 2s ease-out, glow 3s ease-in-out infinite alternate;
+      text-align: center;
     }
     header p {
       font-size: 1em;
       color: #444;
       text-align: center;
-      margin-top: 4px;
-      animation: fadeIn 3s ease-out;
-    }
-
-    /* Efeitos de brilho e entrada */
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes glow {
-      from { text-shadow: 0 0 5px #b5e38f, 0 0 10px #a8e27c, 0 0 15px #8db24d; }
-      to { text-shadow: 0 0 10px #d5f1a3, 0 0 20px #b7f589, 0 0 25px #8db24d; }
     }
   </style>
 </head>
@@ -64,13 +45,13 @@
     <!-- Cabeçalho -->
     <header>
       <h1>Jackline e Samarthony</h1>
-      <p>“O amor escrito por Deus floresce para sempre.” <br>Compartilhe com a nossa hashtag <strong>#JackESam</strong></p>
+      <p>Compartilhe com a nossa hashtag <strong>#JackESam</strong></p>
     </header>
 
     <p class="small">Como usar: Tire uma foto com a câmera ou envie da galeria. A moldura será aplicada automaticamente. Depois, baixe sua foto pronta.</p>
 
     <div class="note">
-      <strong>Passo a passo:</strong> Permita a câmera (se for usar), capture ou envie uma foto e depois baixe sua imagem com a moldura oficial do casamento.
+      <strong>Passo a passo:</strong> Permitir câmera (se for usar), capturar ou enviar foto e depois baixar a foto com a moldura oficial do casamento.
     </div>
 
     <div class="controls">
@@ -104,7 +85,7 @@
     </div>
 
     <div class="footer">
-      <p>Criado por <strong>Katiene Barbosa 💫</strong></p>
+      <p>Criado por <span>Katiene Barbosa 💫</span></p>
     </div>
   </div>
 
@@ -140,8 +121,8 @@ loadOverlay('overlay.png');
 function drawImageCover(img, skipStore = false) {
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
-  const scale = Math.max(cw / iw, ch / ih);
-  const nw = iw * scale, nh = ih * scale;
+  const r = Math.max(cw / iw, ch / ih);
+  const nw = iw * r, nh = ih * r;
   const x = (cw - nw) / 2, y = (ch - nh) / 2;
 
   ctx.clearRect(0, 0, cw, ch);
@@ -157,16 +138,15 @@ function redrawCanvas() {
   else drawOverlay();
 }
 
+// 🔹 Ajuste para centralizar molduras de qualquer tamanho sem cortar
 function drawOverlay() {
-  if (overlayLoaded) {
-    const cw = canvas.width, ch = canvas.height;
-    const iw = overlayImage.width, ih = overlayImage.height;
-    const scale = Math.max(cw / iw, ch / ih);
-    const nw = iw * scale, nh = ih * scale;
-    const x = (cw - nw) / 2, y = (ch - nh) / 2;
-
-    ctx.drawImage(overlayImage, x, y, nw, nh);
-  }
+  if (!overlayLoaded) return;
+  const cw = canvas.width, ch = canvas.height;
+  const iw = overlayImage.width, ih = overlayImage.height;
+  const r = Math.min(cw / iw, ch / ih);
+  const nw = iw * r, nh = ih * r;
+  const x = (cw - nw) / 2, y = (ch - nh) / 2;
+  ctx.drawImage(overlayImage, x, y, nw, nh);
 }
 
 overlaySelect.addEventListener('change', () => {
@@ -253,7 +233,5 @@ resetBtn.addEventListener('click', () => {
 
 console.log('App-filtro criado por Katiene Barbosa carregado com sucesso.');
 </script>
-
 </body>
 </html>
-
