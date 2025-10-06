@@ -17,7 +17,7 @@
     .note{background:#f8fafc;border:1px solid #e6eef8;padding:8px;border-radius:8px;margin:10px 0;font-size:13px}
     label{font-size:13px}
     .small-muted{font-size:12px;color:#666}
-    .footer{font-size:12px;color:#666;margin-top:12px}
+    .footer{font-size:13px;color:#666;margin-top:12px}
   </style>
 </head>
 <body>
@@ -79,100 +79,115 @@ const ctx = canvas.getContext('2d');
 let stream = null;
 let overlayImage = new Image();
 let overlayLoaded = false;
-let baseImage = null;
+let lastBaseImage = null; // guarda a última foto capturada ou enviada
 
-// Lista automática de molduras — basta colocar PNG na pasta
-const overlayFiles = ["overlay.png", "overlay2.png", "overlay3.png"]; // adicione aqui novos nomes de molduras
-function populateOverlaySelect() {
-  overlaySelect.innerHTML = "";
-  overlayFiles.forEach(file => {
-    const option = document.createElement("option");
-    option.value = file;
-    option.textContent = file.replace(/\.[^/.]+$/, ""); // remove extensão para exibir só nome
-    overlaySelect.appendChild(option);
-  });
-}
-populateOverlaySelect();
-
-// Função para carregar moldura
+// --- Carregar moldura ---
 function loadOverlay(src) {
   overlayImage = new Image();
-  overlayImage.crossOrigin = "anonymous";
-  overlayImage.onload = () => { overlayLoaded = true; if (baseImage) drawImageCover(baseImage); };
+  overlayImage.crossOrigin = 'anonymous';
+  overlayLoaded = false;
+  overlayImage.onload = () => {
+    overlayLoaded = true;
+    redrawCanvas(); // redesenha tudo limpo
+  };
   overlayImage.src = src;
 }
-loadOverlay(overlayFiles[0]); // Moldura inicial
+loadOverlay('overlay.png');
 
-function drawImageCover(img) {
-  baseImage = img;
+// --- Desenhar imagem ---
+function drawImageCover(img, skipStore = false) {
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
-  const r = Math.max(cw/iw, ch/ih);
+  const r = Math.max(cw / iw, ch / ih);
   const nw = iw * r, nh = ih * r;
-  const x = (cw - nw)/2, y = (ch - nh)/2;
-  ctx.clearRect(0,0,cw,ch);
+  const x = (cw - nw) / 2, y = (ch - nh) / 2;
+
+  ctx.clearRect(0, 0, cw, ch);
   ctx.drawImage(img, x, y, nw, nh);
+
+  if (!skipStore) lastBaseImage = img;
   drawOverlay();
 }
 
+// --- Redesenhar imagem + moldura (usado ao trocar moldura) ---
+function redrawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (lastBaseImage) drawImageCover(lastBaseImage, true);
+  else drawOverlay();
+}
+
+// --- Desenhar moldura ---
 function drawOverlay() {
   if (overlayLoaded) {
     ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
   }
 }
 
-// Trocar moldura
-overlaySelect.addEventListener('change', ()=> {
-  loadOverlay(overlaySelect.value);
+// --- Trocar moldura ---
+overlaySelect.addEventListener('change', () => {
+  const selected = overlaySelect.value;
+  loadOverlay(selected);
+  alert('Moldura alterada para: ' + overlaySelect.options[overlaySelect.selectedIndex].text);
 });
 
-// Carregar foto
-photoInput.addEventListener('change', (ev)=>{
+// --- Upload de foto ---
+photoInput.addEventListener('change', (ev) => {
   const f = ev.target.files && ev.target.files[0];
-  if(!f) return;
+  if (!f) return;
   const reader = new FileReader();
-  reader.onload = e=>{
+  reader.onload = e => {
     const img = new Image();
-    img.onload = ()=> drawImageCover(img);
+    img.onload = () => drawImageCover(img);
     img.src = e.target.result;
   };
   reader.readAsDataURL(f);
 });
 
-// Câmera
-openCamBtn.addEventListener('click', async ()=>{
-  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
-    try{
+// --- Câmera ---
+openCamBtn.addEventListener('click', async () => {
+  if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+    try {
       stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
       video.srcObject = stream;
-      video.play();
       video.style.display = 'block';
       openCamBtn.style.display = 'none';
       stopCamBtn.style.display = 'inline-block';
       captureBtn.style.display = 'inline-block';
-    }catch(err){ alert('Erro ao acessar câmera: ' + err.message); }
+    } catch (err) {
+      alert('Erro ao acessar câmera: ' + err.message);
+    }
   }
 });
 
-stopCamBtn.addEventListener('click', ()=>{
-  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+stopCamBtn.addEventListener('click', () => {
+  if (stream) {
+    stream.getTracks().forEach(t => t.stop());
+    stream = null;
+  }
   video.style.display = 'none';
   openCamBtn.style.display = 'inline-block';
   stopCamBtn.style.display = 'none';
   captureBtn.style.display = 'none';
 });
 
-captureBtn.addEventListener('click', ()=>{
-  if(!stream) return;
+// --- Capturar foto da câmera ---
+captureBtn.addEventListener('click', () => {
+  if (!stream) return;
   const vw = video.videoWidth, vh = video.videoHeight;
   const tempCanvas = document.createElement('canvas');
   tempCanvas.width = vw; tempCanvas.height = vh;
   const tctx = tempCanvas.getContext('2d');
-  tctx.drawImage(video,0,0,vw,vh);
+  tctx.drawImage(video, 0, 0, vw, vh);
+
   const img = new Image();
-  img.onload = ()=> drawImageCover(img);
+  img.onload = () => {
+    drawImageCover(img);
+    lastBaseImage = img;
+  };
   img.src = tempCanvas.toDataURL('image/png');
-  stream.getTracks().forEach(t=>t.stop());
+
+  // encerra câmera
+  stream.getTracks().forEach(t => t.stop());
   stream = null;
   video.style.display = 'none';
   openCamBtn.style.display = 'inline-block';
@@ -180,8 +195,9 @@ captureBtn.addEventListener('click', ()=>{
   captureBtn.style.display = 'none';
 });
 
-// Baixar imagem
-downloadBtn.addEventListener('click', ()=>{
+// --- Baixar imagem ---
+downloadBtn.addEventListener('click', () => {
+  redrawCanvas(); // garante que a moldura final está aplicada
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = data;
@@ -189,20 +205,18 @@ downloadBtn.addEventListener('click', ()=>{
   a.click();
 });
 
-// Reset
-resetBtn.addEventListener('click', ()=>{
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  baseImage = null;
-  loadOverlay(overlayFiles[0]);
+// --- Reset ---
+resetBtn.addEventListener('click', () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lastBaseImage = null;
+  loadOverlay('overlay.png');
 });
-</script>
 
+console.log('App-filtro criado por Katiene Barbosa carregado com sucesso.');
+</script>
 
 </body>
 </html>
-
-
-
 
 
 
