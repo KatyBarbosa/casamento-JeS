@@ -1,0 +1,207 @@
+<!--
+Mini App: Filtro/Moldura para casamento (HTML único)
+-->
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title> Casamento — J&S</title>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
+    .wrap{max-width:420px;margin:12px auto;padding:10px}
+    h1{font-size:18px;margin:6px 0}
+    p.small{font-size:13px;color:#444;margin:6px 0}
+    .controls{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+    button, .btn{background:#8db24d;color:white;border:0;padding:8px 12px;border-radius:8px;font-weight:600}
+    input[type=file]{padding:6px}
+    #video{max-width:100%;display:none;border-radius:8px}
+    #canvas{width:100%;height:auto;border-radius:8px;background:#111}
+    .note{background:#f8fafc;border:1px solid #e6eef8;padding:8px;border-radius:8px;margin:10px 0;font-size:13px}
+    label{font-size:13px}
+    .small-muted{font-size:12px;color:#666}
+    .footer{font-size:12px;color:#666;margin-top:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1> Casamento Jackline e Samartony</h1>
+    <p class="small"> Como usar:</strong> Tire uma foto com a câmera ou envie da galeria. A moldura será aplicada automaticamente. Depois, baixe sua foto pronta.</p>
+
+    <div class="note">
+      <strong>Passo a passo:</strong> Permitir câmera (se for usar), capturar ou enviar foto e depois baixar a versão final.
+    </div>
+
+    <div class="controls">
+      <label class="btn" id="openCamBtn">Abrir Câmera</label>
+      <label class="btn" id="stopCamBtn" style="display:none;background:#e53e3e">Parar Câmera</label>
+      <label class="btn" id="captureBtn" style="display:none;background:#38a169">Capturar</label>
+      <input id="photoInput" type="file" accept="image/*" capture="environment" />
+    </div>
+
+    <p class="small-muted">Ou carregue sua foto da galeria (aceita fotos da câmera também).</p>
+
+    <div style="margin:10px 0">
+      <video id="video" playsinline autoplay></video>
+    </div>
+
+    <canvas id="canvas" width="1080" height="1920"></canvas>
+
+    <div style="margin-top:8px">
+      <label class="small-muted">Moldura (overlay):</label><br>
+      <input id="overlayInput" type="file" accept="image/png" />
+      <button class="btn" id="applyOverlayLocal" style="display:inline-block;margin-left:6px;padding:8px 10px">Carregar moldura</button>
+    </div>
+
+    <div style="margin-top:16px">
+      <label class="small-muted">Escolha a moldura:</label><br>
+      <select id="frameSelector" class="btn" style="background:#e2e8f0;color:#333;border:none;padding:6px 10px;">
+        <option value="overlay.png">Moldura Padrão</option>
+        <option value="moldura2.png">Versão Clara</option>
+        <option value="moldura3.png">Versão Noite</option>
+      </select>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px">
+      <button class="btn" id="downloadBtn">📥 Baixar imagem</button>
+      <button class="btn" id="resetBtn" style="background:#718096">Limpar</button>
+    </div>
+
+    <div class="footer">
+      <p> Criado por <span>Katiene Barbosa 💫</p>
+    </div>
+  </div>
+
+<script>
+const DEFAULT_OVERLAY_URL = 'overlay.png';
+const video = document.getElementById('video');
+const openCamBtn = document.getElementById('openCamBtn');
+const stopCamBtn = document.getElementById('stopCamBtn');
+const captureBtn = document.getElementById('captureBtn');
+const photoInput = document.getElementById('photoInput');
+const overlayInput = document.getElementById('overlayInput');
+const applyOverlayLocal = document.getElementById('applyOverlayLocal');
+const downloadBtn = document.getElementById('downloadBtn');
+const resetBtn = document.getElementById('resetBtn');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+let stream = null;
+let overlayImage = new Image();
+let overlayLoaded = false;
+
+function tryLoadDefaultOverlay(){
+  if(!DEFAULT_OVERLAY_URL) return;
+  overlayImage = new Image();
+  overlayImage.crossOrigin = 'anonymous';
+  overlayImage.onload = () => { overlayLoaded = true; console.log('Overlay carregado'); }
+  overlayImage.onerror = (e) => { console.log('Não foi possível carregar overlay por CORS ou arquivo não encontrado:', e); overlayLoaded = false; }
+  overlayImage.src = DEFAULT_OVERLAY_URL;
+}
+tryLoadDefaultOverlay();
+
+function drawImageCover(img){
+  const cw = canvas.width, ch = canvas.height;
+  const iw = img.width, ih = img.height;
+  const r = Math.max(cw/iw, ch/ih);
+  const nw = iw * r, nh = ih * r;
+  const x = (cw - nw)/2, y = (ch - nh)/2;
+  ctx.clearRect(0,0,cw,ch);
+  ctx.drawImage(img, x, y, nw, nh);
+}
+
+function drawOverlay(){
+  if(overlayLoaded){
+    try{ ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height); }catch(err){ console.error('Erro ao desenhar overlay (possível CORS):', err); }
+  }
+}
+
+photoInput.addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){ drawImageCover(img); drawOverlay(); }
+    img.src = e.target.result;
+  }
+  reader.readAsDataURL(f);
+});
+
+applyOverlayLocal.addEventListener('click', ()=>{ overlayInput.click(); });
+overlayInput.addEventListener('change', (ev)=>{
+  const f = ev.target.files && ev.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    overlayImage = new Image();
+    overlayImage.onload = function(){ overlayLoaded = true; alert('Moldura carregada. Agora tire a foto ou faça upload.'); }
+    overlayImage.src = e.target.result;
+  }
+  reader.readAsDataURL(f);
+});
+
+document.getElementById('frameSelector').addEventListener('change', (e) => {
+  overlayImage = new Image();
+  overlayImage.crossOrigin = 'anonymous';
+  overlayImage.onload = function(){ overlayLoaded = true; console.log('Nova moldura carregada:', e.target.value); alert('Moldura alterada com sucesso!'); };
+  overlayImage.src = e.target.value;
+});
+
+openCamBtn.addEventListener('click', async ()=>{
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' }, audio: false });
+      video.srcObject = stream;
+      video.style.display = 'block';
+      openCamBtn.style.display = 'none';
+      stopCamBtn.style.display = 'inline-block';
+      captureBtn.style.display = 'inline-block';
+    }catch(err){ alert('Não foi possível acessar a câmera: ' + err.message); }
+  }else{ alert('Câmera não suportada neste navegador. Use a opção de enviar foto da galeria.'); }
+});
+
+stopCamBtn.addEventListener('click', ()=>{
+  if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+  video.style.display = 'none';
+  openCamBtn.style.display = 'inline-block';
+  stopCamBtn.style.display = 'none';
+  captureBtn.style.display = 'none';
+});
+
+captureBtn.addEventListener('click', ()=>{
+  if(!stream) return;
+  const vw = video.videoWidth, vh = video.videoHeight;
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = vw; tempCanvas.height = vh;
+  const tctx = tempCanvas.getContext('2d');
+  tctx.drawImage(video,0,0,vw,vh);
+  const img = new Image();
+  img.onload = function(){ drawImageCover(img); drawOverlay(); }
+  img.src = tempCanvas.toDataURL('image/png');
+  stream.getTracks().forEach(t=>t.stop());
+  stream = null;
+  video.style.display = 'none';
+  openCamBtn.style.display = 'inline-block';
+  stopCamBtn.style.display = 'none';
+  captureBtn.style.display = 'none';
+});
+
+downloadBtn.addEventListener('click', ()=>{
+  try{
+    const data = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = data;
+    a.download = ' casamento-JS.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }catch(err){ alert('Não foi possível gerar o arquivo. Possível problema de CORS.'); }
+});
+
+resetBtn.addEventListener('click', ()=>{ ctx.clearRect(0,0,canvas.width,canvas.height); overlayLoaded = false; overlayImage = new Image(); tryLoadDefaultOverlay(); });
+
+console.log('Mini App carregado com seleção de moldura.');
+</script>
+</body>
+</html>
