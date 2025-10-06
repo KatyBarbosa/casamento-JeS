@@ -4,7 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Casamento J&S</title>
+
+  <!-- Fonte Great Vibes para cabeçalho -->
   <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
+
   <style>
     html,body{height:100%;margin:0;font-family:system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial}
     .wrap{max-width:420px;margin:12px auto;padding:10px}
@@ -19,12 +23,32 @@
     label{font-size:13px}
     .small-muted{font-size:12px;color:#666}
     .footer{font-size:14px;color:#666;margin-top:14px}
+
+    /* Cabeçalho personalizado */
+    header h1 {
+      font-family: 'Great Vibes', cursive;
+      color: #8db24d;
+      font-size: 2em;
+      margin: 0;
+      text-align: center;
+    }
+    header p {
+      font-size: 1em;
+      color: #444;
+      text-align: center;
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1> Casamento Jackline e Samarthony</h1>
-    <p class="small">Como usar:</strong> Tire uma foto com a câmera ou envie da galeria. A moldura será aplicada automaticamente. Depois, baixe sua foto pronta.</p>
+
+    <!-- Cabeçalho -->
+    <header>
+      <h1>Jackline & Samarthony</h1>
+      <p>✨ 06/12/2025 ✨</p>
+    </header>
+
+    <p class="small">Como usar: Tire uma foto com a câmera ou envie da galeria. A moldura será aplicada automaticamente. Depois, baixe sua foto pronta.</p>
 
     <div class="note">
       <strong>Passo a passo:</strong> Permitir câmera (se for usar), capturar ou enviar foto e depois baixar a foto com a moldura oficial do casamento.
@@ -80,22 +104,20 @@ const ctx = canvas.getContext('2d');
 let stream = null;
 let overlayImage = new Image();
 let overlayLoaded = false;
-let lastBaseImage = null; // guarda a última foto capturada ou enviada
+let lastBaseImage = null;
 
-// --- Carregar moldura ---
 function loadOverlay(src) {
   overlayImage = new Image();
   overlayImage.crossOrigin = 'anonymous';
   overlayLoaded = false;
   overlayImage.onload = () => {
     overlayLoaded = true;
-    redrawCanvas(); // redesenha tudo limpo
+    redrawCanvas();
   };
   overlayImage.src = src;
 }
 loadOverlay('overlay.png');
 
-// --- Desenhar imagem ---
 function drawImageCover(img, skipStore = false) {
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
@@ -110,28 +132,24 @@ function drawImageCover(img, skipStore = false) {
   drawOverlay();
 }
 
-// --- Redesenhar imagem + moldura (usado ao trocar moldura) ---
 function redrawCanvas() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (lastBaseImage) drawImageCover(lastBaseImage, true);
   else drawOverlay();
 }
 
-// --- Desenhar moldura ---
 function drawOverlay() {
   if (overlayLoaded) {
     ctx.drawImage(overlayImage, 0, 0, canvas.width, canvas.height);
   }
 }
 
-// --- Trocar moldura ---
 overlaySelect.addEventListener('change', () => {
   const selected = overlaySelect.value;
   loadOverlay(selected);
   alert('Moldura alterada para: ' + overlaySelect.options[overlaySelect.selectedIndex].text);
 });
 
-// --- Upload de foto ---
 photoInput.addEventListener('change', (ev) => {
   const f = ev.target.files && ev.target.files[0];
   if (!f) return;
@@ -144,7 +162,6 @@ photoInput.addEventListener('change', (ev) => {
   reader.readAsDataURL(f);
 });
 
-// --- Câmera ---
 openCamBtn.addEventListener('click', async () => {
   if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
     try {
@@ -171,7 +188,6 @@ stopCamBtn.addEventListener('click', () => {
   captureBtn.style.display = 'none';
 });
 
-// --- Capturar foto da câmera ---
 captureBtn.addEventListener('click', () => {
   if (!stream) return;
   const vw = video.videoWidth, vh = video.videoHeight;
@@ -187,7 +203,6 @@ captureBtn.addEventListener('click', () => {
   };
   img.src = tempCanvas.toDataURL('image/png');
 
-  // encerra câmera
   stream.getTracks().forEach(t => t.stop());
   stream = null;
   video.style.display = 'none';
@@ -196,9 +211,8 @@ captureBtn.addEventListener('click', () => {
   captureBtn.style.display = 'none';
 });
 
-// --- Baixar imagem ---
 downloadBtn.addEventListener('click', () => {
-  redrawCanvas(); // garante que a moldura final está aplicada
+  redrawCanvas();
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = data;
@@ -206,7 +220,6 @@ downloadBtn.addEventListener('click', () => {
   a.click();
 });
 
-// --- Reset ---
 resetBtn.addEventListener('click', () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   lastBaseImage = null;
