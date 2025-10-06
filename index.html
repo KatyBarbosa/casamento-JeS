@@ -88,8 +88,7 @@ function loadOverlay(src) {
   overlayLoaded = false;
   overlayImage.onload = () => {
     overlayLoaded = true;
-    if (lastBaseImage) drawImageCover(lastBaseImage, true); // redesenha base + moldura
-    else drawOverlay();
+    redrawCanvas(); // redesenha tudo limpo
   };
   overlayImage.src = src;
 }
@@ -107,8 +106,14 @@ function drawImageCover(img, skipStore = false) {
   ctx.drawImage(img, x, y, nw, nh);
 
   if (!skipStore) lastBaseImage = img;
-  if (overlayLoaded) drawOverlay();
-  else overlayImage.onload = drawOverlay;
+  drawOverlay();
+}
+
+// --- Redesenhar imagem + moldura (usado ao trocar moldura) ---
+function redrawCanvas() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  if (lastBaseImage) drawImageCover(lastBaseImage, true);
+  else drawOverlay();
 }
 
 // --- Desenhar moldura ---
@@ -177,7 +182,7 @@ captureBtn.addEventListener('click', () => {
   const img = new Image();
   img.onload = () => {
     drawImageCover(img);
-    lastBaseImage = img; // armazena a última imagem capturada
+    lastBaseImage = img;
   };
   img.src = tempCanvas.toDataURL('image/png');
 
@@ -192,7 +197,7 @@ captureBtn.addEventListener('click', () => {
 
 // --- Baixar imagem ---
 downloadBtn.addEventListener('click', () => {
-  if (overlayLoaded) drawOverlay(); // garante a moldura
+  redrawCanvas(); // garante que a moldura final está aplicada
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = data;
@@ -210,9 +215,9 @@ resetBtn.addEventListener('click', () => {
 console.log('App-filtro criado por Katiene Barbosa carregado com sucesso.');
 </script>
 
-
 </body>
 </html>
+
 
 
 
