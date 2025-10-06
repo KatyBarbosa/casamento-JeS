@@ -79,36 +79,36 @@ const ctx = canvas.getContext('2d');
 let stream = null;
 let overlayImage = new Image();
 let overlayLoaded = false;
+let lastBaseImage = null; // guarda a última foto capturada ou enviada
 
-// --- Função para carregar moldura ---
+// --- Carregar moldura ---
 function loadOverlay(src) {
   overlayImage = new Image();
   overlayImage.crossOrigin = 'anonymous';
   overlayLoaded = false;
   overlayImage.onload = () => {
     overlayLoaded = true;
-    drawOverlay();
+    if (lastBaseImage) drawImageCover(lastBaseImage, true); // redesenha base + moldura
+    else drawOverlay();
   };
   overlayImage.src = src;
 }
-loadOverlay('overlay.png'); // padrão inicial
+loadOverlay('overlay.png');
 
-// --- Desenhar imagem no canvas ---
-function drawImageCover(img) {
+// --- Desenhar imagem ---
+function drawImageCover(img, skipStore = false) {
   const cw = canvas.width, ch = canvas.height;
   const iw = img.width, ih = img.height;
   const r = Math.max(cw / iw, ch / ih);
   const nw = iw * r, nh = ih * r;
   const x = (cw - nw) / 2, y = (ch - nh) / 2;
+
   ctx.clearRect(0, 0, cw, ch);
   ctx.drawImage(img, x, y, nw, nh);
 
-  // garantir que a moldura será aplicada mesmo que ainda não esteja pronta
-  if (overlayLoaded) {
-    drawOverlay();
-  } else {
-    overlayImage.onload = drawOverlay;
-  }
+  if (!skipStore) lastBaseImage = img;
+  if (overlayLoaded) drawOverlay();
+  else overlayImage.onload = drawOverlay;
 }
 
 // --- Desenhar moldura ---
@@ -118,7 +118,7 @@ function drawOverlay() {
   }
 }
 
-// --- Troca de moldura ---
+// --- Trocar moldura ---
 overlaySelect.addEventListener('change', () => {
   const selected = overlaySelect.value;
   loadOverlay(selected);
@@ -165,6 +165,7 @@ stopCamBtn.addEventListener('click', () => {
   captureBtn.style.display = 'none';
 });
 
+// --- Capturar foto da câmera ---
 captureBtn.addEventListener('click', () => {
   if (!stream) return;
   const vw = video.videoWidth, vh = video.videoHeight;
@@ -172,9 +173,15 @@ captureBtn.addEventListener('click', () => {
   tempCanvas.width = vw; tempCanvas.height = vh;
   const tctx = tempCanvas.getContext('2d');
   tctx.drawImage(video, 0, 0, vw, vh);
+
   const img = new Image();
-  img.onload = () => drawImageCover(img);
+  img.onload = () => {
+    drawImageCover(img);
+    lastBaseImage = img; // armazena a última imagem capturada
+  };
   img.src = tempCanvas.toDataURL('image/png');
+
+  // encerra câmera
   stream.getTracks().forEach(t => t.stop());
   stream = null;
   video.style.display = 'none';
@@ -185,8 +192,7 @@ captureBtn.addEventListener('click', () => {
 
 // --- Baixar imagem ---
 downloadBtn.addEventListener('click', () => {
-  // garantir que a moldura esteja realmente aplicada antes de baixar
-  if (overlayLoaded) drawOverlay();
+  if (overlayLoaded) drawOverlay(); // garante a moldura
   const data = canvas.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = data;
@@ -197,13 +203,16 @@ downloadBtn.addEventListener('click', () => {
 // --- Reset ---
 resetBtn.addEventListener('click', () => {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  lastBaseImage = null;
   loadOverlay('overlay.png');
 });
 
 console.log('App-filtro criado por Katiene Barbosa carregado com sucesso.');
 </script>
 
+
 </body>
 </html>
+
 
 
